@@ -1,0 +1,69 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+echo "Running pre-commit checks..."
+
+# 0) Ensure we're at repo root
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+cd "$REPO_ROOT"
+
+# 1) Formatting check on staged files (fallback to all tracked .go files)
+echo "Checking formatting on staged Go files..."
+
+# Collect staged .go files (newline-delimited). If none, fall back to all tracked .go files.
+files="$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.go$' || true)"
+if [ -z "$files" ]; then
+  files="$(git ls-files '*.go' || true)"
+fi
+
+unformatted=""
+if [ -n "$files" ]; then
+  # Check formatting for each file; robust against filenames with spaces by reading line-by-line
+  while IFS= read -r f; do
+    [ -z "$f" ] && continue
+    # gofmt prints the filename if it's unformatted when using -l
+    out="$(gofmt -s -l "$f" 2>/dev/null || true)"
+    if [ -n "$out" ]; then
+      # accumulate with a real newline between entries
+      if [ -z "$unformatted" ]; then
+        unformatted="$out"
+      else
+        unformatted="${unformatted}
+${out}"
+      fi
+    fi
+  done <<EOF
+$files
+EOF
+fi
+
+if [ -n "$unformatted" ]; then
+  echo "gofmt found unformatted files:" >&2
+  echo "$unformatted" >&2
+  echo >&2
+  echo "Fix with:" >&2
+  # Print space-separated list for the -w command
+  fix_list=$(echo "$unformatted" | tr '\n' ' ')
+  echo "  gofmt -s -w $fix_list" >&2
+  exit 1
+fi
+
+# 2) go vet
+echo "Running go vet..."
+go vet ./...
+
+# 3) Lint (golangci-lint if available)
+if command -v golangci-lint >/dev/null 2>&1; then
+  echo "Running golangci-lint..."
+  golangci-lint run
+else
+  echo "golangci-lint not found; skipping lint. Install with:" >&2
+  echo "  brew install golangci-lint" >&2
+  echo "  or see https://golangci-lint.run/usage/install/" >&2
+fi
+
+# 4) Tests
+echo "Running tests..."
+go test ./...
+
+echo "All checks passed."
