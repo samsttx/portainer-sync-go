@@ -383,6 +383,26 @@ services:
 			},
 			expectError: false,
 		},
+		{
+			name: "Environment variables in labels",
+			composeYAML: `version: '3'
+services:
+  web:
+    image: nginx:latest
+    labels:
+      traefik.enable: true
+      traefik.http.routers.myapp.rule: Host("${HOST}")
+      traefik.http.services.myapp.loadbalancer.server.port: "${APP_PORT}"
+      com.example.version: "${APP_VERSION:-1.0.0}"
+      com.example.env: "${ENV_NAME}"`,
+			expected: map[string]bool{
+				"HOST":        true,
+				"APP_PORT":    true,
+				"APP_VERSION": true,
+				"ENV_NAME":    true,
+			},
+			expectError: false,
+		},
 	}
 
 	for _, tt := range tests {

@@ -674,9 +674,10 @@ func (c *SyncClient) deleteStack(decision StackDecision) error {
 	return nil
 }
 
-// extractEnvVarsFromString extracts environment variable names from a string using ${VAR} syntax
+// extractEnvVarsFromString extracts environment variable names from a string using ${VAR} or ${VAR:-default} syntax
 func extractEnvVarsFromString(s string, envVars map[string]bool) {
-	re := regexp.MustCompile(`\${([a-zA-Z_][a-zA-Z0-9_]*)}`)
+	// Match ${VAR} or ${VAR:-default} patterns
+	re := regexp.MustCompile(`\${([a-zA-Z_][a-zA-Z0-9_]*)(?::-[^}]*)?}`)
 	matches := re.FindAllStringSubmatch(s, -1)
 	for _, match := range matches {
 		if len(match) > 1 {
@@ -739,6 +740,15 @@ func extractEnvVarsFromCompose(composeContent string) (map[string]bool, error) {
 				if envFileStr, isStr := envFile.(string); isStr && envFileStr != "" {
 					extractEnvVarsFromString(envFileStr, envVars)
 					usesEnvFile = true
+				}
+			}
+		}
+
+		// Process labels for environment variables
+		if labels, ok := serviceConfig["labels"].(map[string]interface{}); ok {
+			for _, value := range labels {
+				if labelValue, isStr := value.(string); isStr {
+					extractEnvVarsFromString(labelValue, envVars)
 				}
 			}
 		}
