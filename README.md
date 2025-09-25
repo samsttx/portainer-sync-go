@@ -4,7 +4,13 @@ A Go application that synchronizes Docker Compose stacks between a local directo
 
 ## TODO
 
-- Add env var with volumes to includes
+- improve env var check in compose file
+- in reports log status of create / delete / update
+- do not update if not changes
+- deploy single stack or list
+- apply only specific action
+- report 1: numbers per action
+- report 2: list stacks table with name, actions,   status(success/error), reason, env vars count and names
 
 ## Features
 

@@ -717,6 +717,11 @@ func extractEnvVarsFromCompose(composeContent string) (map[string]bool, error) {
 			}
 		}
 
+		// Process image field for environment variables
+		if image, ok := serviceConfig["image"].(string); ok && image != "" {
+			extractEnvVarsFromString(image, envVars)
+		}
+
 		// Process environment variables
 		switch env := serviceConfig["environment"].(type) {
 		case map[string]interface{}:

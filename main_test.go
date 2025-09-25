@@ -403,6 +403,39 @@ services:
 			},
 			expectError: false,
 		},
+		{
+			name: "Environment variables in image field",
+			composeYAML: `version: '3'
+services:
+  app:
+    image: ${REGISTRY:-docker.io}/myorg/myapp:${TAG:-latest}
+    environment:
+      - DB_HOST=db
+      - DB_PORT=5432`,
+			expected: map[string]bool{
+				"REGISTRY": true,
+				"TAG":      true,
+				"DB_HOST":  true,
+				"DB_PORT":  true,
+			},
+			expectError: false,
+		},
+		{
+			name: "Multiple environment variables in image field",
+			composeYAML: `version: '3'
+services:
+  web:
+    image: ${REGISTRY}/${REPOSITORY}/web:${TAG}
+  api:
+    image: ${REGISTRY}/${REPOSITORY}/api:${TAG}-${ENV}`,
+			expected: map[string]bool{
+				"REGISTRY":   true,
+				"REPOSITORY": true,
+				"TAG":        true,
+				"ENV":        true,
+			},
+			expectError: false,
+		},
 	}
 
 	for _, tt := range tests {
